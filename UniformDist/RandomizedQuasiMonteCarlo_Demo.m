@@ -7,23 +7,34 @@
 % can draw a histogram (compare figure 1 for plain MC), but with much smaller
 % variance than MC at the same N.
 %
-% Three examples:
+% Four examples:
 %   (i)   Stratification with a random shift (Cranley-Patterson rotation):
 %         take the equally-spaced grid and shift all points by a common
 %         U~Uniform(0,1), wrapping around mod 1.
 %   (ii)  Sobol sequence with a random digital shift in base 2: XOR the binary
 %         digits of every Sobol point with a common random bit string.
-%   (iii) Sobol sequence with Owen (nested) scrambling.
+%   (iii) Sobol sequence with Owen (nested uniform) scrambling: digit j of a
+%         point is flipped (or not) at random, with a separate random flip for
+%         every distinct value of the preceding j-1 digits. In one dimension,
+%         Owen scrambling the first N=2^k Sobol points is exactly stratified
+%         sampling: one independent Uniform draw in each interval [j/N,(j+1)/N).
+%   (iv)  Sobol sequence with Matlab's built-in scramble(p,'MatousekAffineOwen').
+%         Despite the name this is NOT Owen scrambling: it is a random linear
+%         (affine matrix) scramble combined with a random digital shift. It has
+%         the same variance as Owen scrambling, but the deeper digits of the
+%         points are linear functions of the leading digits, so the points are
+%         not independent within their intervals (see RQMC_CheckNormal).
 % The true mean is 1/2.
 
 Nvals = [N1 N2];
 
 est_strat  = zeros(M, 2);   % (i)   stratification + random shift
 est_dshift = zeros(M, 2);   % (ii)  Sobol + digital shift in base 2
-est_owen   = zeros(M, 2);   % (iii) Sobol + Owen scramble
+est_owen   = zeros(M, 2);   % (iii) Sobol + Owen (nested uniform) scramble
+est_affine = zeros(M, 2);   % (iv)  Sobol + Matlab 'MatousekAffineOwen' (affine + digital shift)
 
 p     = sobolset(1);        % 1-D Sobol point set (reused for all randomizations)
-nbits = 32;                 % number of bits used for the base-2 digital shift
+nbits = 32;                 % number of bits used for the base-2 digital shift and the Owen scramble
 scale = 2^nbits;
 
 for jN = 1:2
@@ -32,7 +43,7 @@ for jN = 1:2
     % Deterministic QMC building blocks for this N
     grid    = ((1:N)'-0.5)/N;                % equally-spaced stratification grid
     sob     = net(p, N);                     % first N Sobol points
-    sob_int = uint64(floor(sob*scale));      % integer form, for the digital shift
+    sob_int = uint64(floor(sob*scale));      % integer form, for the digital shift and Owen scramble
 
     for m = 1:M
         % (i) stratification with a common random shift (Cranley-Patterson)
@@ -45,35 +56,52 @@ for jN = 1:2
         pts = double(bitxor(sob_int, shift))/scale;
         est_dshift(m, jN) = mean(pts);
 
-        % (iii) Sobol with Owen scrambling (a fresh scramble each repetition)
+        % (iii) Sobol with Owen (nested uniform) scrambling (a fresh scramble each repetition)
+        % Loop over digits j=1 (most significant) to nbits. All points that share the
+        % same first j-1 digits get the same random flip of digit j; points with
+        % different first j-1 digits get independent flips.
+        pts_int = sob_int;
+        for jj = 1:nbits
+            bitpos = nbits-jj;                               % digit jj sits at bit position nbits-jj (0=least significant)
+            prefix = bitshift(sob_int, -(bitpos+1));         % first jj-1 digits of each (unscrambled) point
+            [~, ~, prefixgroup] = unique(prefix);            % which distinct prefix each point has
+            flip = uint64(rand(max(prefixgroup),1) < 0.5);   % one random flip per distinct prefix
+            pts_int = bitxor(pts_int, bitshift(flip(prefixgroup), bitpos));
+        end
+        pts = double(pts_int)/scale;
+        est_owen(m, jN) = mean(pts);
+
+        % (iv) Sobol with Matlab's 'MatousekAffineOwen' (affine matrix scramble + digital shift)
         ps = scramble(p, 'MatousekAffineOwen');
         pts = net(ps, N);
-        est_owen(m, jN) = mean(pts);
+        est_affine(m, jN) = mean(pts);
     end
 end
 
 %% Report mean and variance of each estimator
 methods = {'(i)   Stratification + random shift', ...
            '(ii)  Sobol + digital shift (base 2)', ...
-           '(iii) Sobol + Owen scramble'};
-allest  = {est_strat, est_dshift, est_owen};
+           '(iii) Sobol + Owen scramble', ...
+           '(iv)  Sobol + MatousekAffineOwen'};
+allest  = {est_strat, est_dshift, est_owen, est_affine};
+
 
 fprintf('\nRQMC results:\n')
-for k = 1:3
+for k = 1:4
     E = allest{k};
     fprintf('%s\n', methods{k})
-    fprintf('   N=20:  mean = %.6f, variance = %.3e\n', mean(E(:,1)), var(E(:,1)))
-    fprintf('   N=100: mean = %.6f, variance = %.3e\n', mean(E(:,2)), var(E(:,2)))
+    fprintf('   N=%d:  mean = %.6f, variance = %.3e\n', Nvals(1), mean(E(:,1)), var(E(:,1)))
+    fprintf('   N=%d: mean = %.6f, variance = %.3e\n', Nvals(2), mean(E(:,2)), var(E(:,2)))
 end
 
 %% Histograms of the M estimates (figure 3)
-% Rows are the three randomization methods, columns are N=20 and N=100.
+% Rows are the four randomization methods, columns are N=N1 and N=N2.
 % Note the variance is far smaller than the MC histograms in figure 1.
 figure(3)
-for k = 1:3
+for k = 1:4
     E = allest{k};
     for jN = 1:2
-        subplot(3, 2, (k-1)*2 + jN)
+        subplot(4, 2, (k-1)*2 + jN)
         histogram(E(:,jN), 30)
         xline(0.5, 'r--', 'LineWidth', 1.5)
         title(sprintf('%s, N=%d  (var = %.2e)', methods{k}, Nvals(jN), var(E(:,jN))))

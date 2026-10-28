@@ -22,8 +22,8 @@ est_strat_N1 = mean(strat_N1);
 est_strat_N2 = mean(strat_N2);
 
 fprintf('QMC - Stratification (midpoints):\n')
-fprintf('  N=20:  estimate = %.6f, error = %+.2e\n', est_strat_N1, est_strat_N1-0.5)
-fprintf('  N=100: estimate = %.6f, error = %+.2e\n', est_strat_N2, est_strat_N2-0.5)
+fprintf('  N=%d:  estimate = %.6f, error = %+.2e\n', N1, est_strat_N1, est_strat_N1-0.5)
+fprintf('  N=%d: estimate = %.6f, error = %+.2e\n', N2, est_strat_N2, est_strat_N2-0.5)
 
 %% (2) Sobol sequence
 p = sobolset(1);               % 1-dimensional Sobol point set
@@ -34,21 +34,21 @@ est_sobol_N1 = mean(sobol_N1);
 est_sobol_N2 = mean(sobol_N2);
 
 fprintf('QMC - Sobol sequence:\n')
-fprintf('  N=20:  estimate = %.6f, error = %+.2e\n', est_sobol_N1, est_sobol_N1-0.5)
-fprintf('  N=100: estimate = %.6f, error = %+.2e\n', est_sobol_N2, est_sobol_N2-0.5)
+fprintf('  N=%d:  estimate = %.6f, error = %+.2e\n', N1, est_sobol_N1, est_sobol_N1-0.5)
+fprintf('  N=%d: estimate = %.6f, error = %+.2e\n', N2, est_sobol_N2, est_sobol_N2-0.5)
 
-%% Visualize the point sets (N=20) to see how evenly they cover [0,1]
+%% Visualize the point sets (N=N1) to see how evenly they cover [0,1]
 % There is no sampling distribution to histogram here (QMC gives a single
 % deterministic estimate), so instead we plot where the N points land.
 figure(2)
 subplot(2,1,1)
 plot(strat_N1, zeros(N1,1), 'o', 'MarkerFaceColor', 'b')
 xline(0.5, 'r--', 'LineWidth', 1.5)
-title(sprintf('QMC Stratification points, N=20  (estimate = %.4f)', est_strat_N1))
+title(sprintf('QMC Stratification points, N=%d  (estimate = %.4f)', N1, est_strat_N1))
 xlabel('point location on [0,1]'); xlim([0 1]); yticks([])
 
 subplot(2,1,2)
 plot(sobol_N1, zeros(N1,1), 'o', 'MarkerFaceColor', 'b')
 xline(0.5, 'r--', 'LineWidth', 1.5)
-title(sprintf('QMC Sobol points, N=20  (estimate = %.4f)', est_sobol_N1))
+title(sprintf('QMC Sobol points, N=%d  (estimate = %.4f)', N1, est_sobol_N1))
 xlabel('point location on [0,1]'); xlim([0 1]); yticks([])
