@@ -95,7 +95,10 @@ MarkovQuasiMonteCarlo_Demo
 %   (iii) one Sobol sequence per state, each with Owen (nested uniform) scrambling
 %   (iv)  randomized rotor-router: each state starts at a random point of its cycle
 %   (v)   fixed counts: a uniformly random path among all paths with exactly the
-%         same transition counts as the path from (iv). This is not RQMC, it is
+%         same transition counts as the path from (iv). [We take the counts from
+%         the path from (iv), rather than rounding (T-1)*pi_i*p_ij, as the counts of
+%         an actual path automatically have every state entered as often as it is
+%         left.] This is not RQMC, it is
 %         'conditional Monte Carlo'. (iv) is the RQMC version of (v): same counts,
 %         but each state's next states come in a balanced order, rather than a random order.
 %   (vi)  fixed two-step counts: as (v), but a uniformly random path among all

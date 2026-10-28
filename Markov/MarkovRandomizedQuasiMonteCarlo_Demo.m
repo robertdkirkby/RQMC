@@ -21,6 +21,11 @@
 %         (Wilson's algorithm); put the other departures from each state in a
 %         random order, with the final departure last; then walk the path. This
 %         gives every path with these counts the same probability (BEST theorem).
+%         Note: rather than rounding (T-1)*pi_i*p_ij to integers, we take the
+%         counts from the path from (iv). Rounding so that every state is entered
+%         as often as it is left (allowing for the first and last states) is
+%         awkward, while the counts of an actual path satisfy this automatically,
+%         and the rotor-router counts are within a few transitions of (T-1)*pi_i*p_ij.
 %         (iv) is the RQMC version of (v): same counts, but each state's
 %         departures come in a balanced order rather than a random order.
 %         Because every path with the same transition counts (and first state)
